@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SekiroFpsUnlockAndMore"
         mc:Ignorable="d"
-        Title="《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）" WindowStartupLocation="CenterScreen" Width="Auto" Height="Auto" SizeToContent="WidthAndHeight" ResizeMode="CanMinimize" Loaded="Window_Loaded" Closing="Window_Closing">
+        Title="《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）" WindowStartupLocation="CenterScreen" Width="Auto" Height="Auto" SizeToContent="WidthAndHeight" ResizeMode="CanMinimize" Loaded="Window_Loaded" Closing="Window_Closing">
     <Grid x:Name="gMainGrid" Background="#FFF9F9F9">
         <DockPanel>
             <StackPanel DockPanel.Dock="Top" Margin="10,10,10,0" Width="800" Height="Auto">
@@ -83,7 +83,7 @@
                 </Expander>
                 <Label HorizontalAlignment="Right" FontSize="18 px">
                     <Hyperlink NavigateUri="https://github.com/uberhalit/SekiroFpsUnlockAndMore" RequestNavigate="Hyperlink_RequestNavigate">
-                        v1.2.5.1 - by uberhalit
+                        v1.2.5.2 - by uberhalit
                     </Hyperlink>
                 </Label>
                 <Label HorizontalAlignment="Right" FontSize="18 px">

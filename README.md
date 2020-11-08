@@ -1,6 +1,6 @@
 # Sekiro FPS Unlocker and more - MOD
 
-《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）
+《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）
 
 # 特别感谢：
 - [uberhalit](https://github.com/uberhalit) 开发了Sekiro FPS Unlocker and more原始版本！
@@ -247,6 +247,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Version History
 
+* v1.2.5.2 (2020-11-02)
+  * updated death penalties code to latest version 1.05
+  * added game version 1.05 (1.5.0.0) to supported versions
 * v1.2.5.1 (2020-02-04)
   * added support for windows' high contrast mode (thanks to [khvorov45](https://github.com/khvorov45) for pointing it out)
   * focus of the game won't be stolen anymore when OBS and the utility try to write/read the stats log files at the same time

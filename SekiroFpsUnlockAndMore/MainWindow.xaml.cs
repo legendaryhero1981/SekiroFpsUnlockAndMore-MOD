@@ -33,6 +33,7 @@ namespace SekiroFpsUnlockAndMore
         internal long _offset_dragonrot_routine = 0x0;
         internal long _offset_deathpenalties1 = 0x0;
         internal long _offset_deathpenalties2 = 0x0;
+        internal long _offset_deathpenalties3 = 0x0;
         internal long _offset_deathscounter_routine = 0x0;
         internal long _offset_timescale = 0x0;
         internal long _offset_timescale_player = 0x0;
@@ -40,6 +41,7 @@ namespace SekiroFpsUnlockAndMore
 
         internal byte[] _patch_deathpenalties1_enable;
         internal byte[] _patch_deathpenalties2_enable;
+        internal byte[] _patch_deathpenalties3_enable;
 
         internal MemoryCaveGenerator _memoryCaveGenerator;
         internal SettingsService _settingsService;
@@ -65,6 +67,7 @@ namespace SekiroFpsUnlockAndMore
         internal string _path_killsLog;
         internal RECT _windowRect;
         internal Size _screenSize;
+        internal bool _isLegacyVersion = false;
 
         internal const string _DATACAVE_SPEEDFIX_POINTER = "speedfixPointer";
         internal const string _DATACAVE_FOV_POINTER = "fovPointer";
@@ -88,7 +91,7 @@ namespace SekiroFpsUnlockAndMore
             var mutex = new Mutex(true, "sekiroFpsUnlockAndMore", out bool isNewInstance);
             if (!isNewInstance)
             {
-                MessageBox.Show("此修改器的另一个实例已经在运行！", "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+                MessageBox.Show("此修改器的另一个实例已经在运行！", "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）", MessageBoxButton.OK, MessageBoxImage.Exclamation);
                 Environment.Exit(0);
             }
             GC.KeepAlive(mutex);
@@ -123,11 +126,11 @@ namespace SekiroFpsUnlockAndMore
 
             IntPtr hWnd = new WindowInteropHelper(this).Handle;
             if (!RegisterHotKey(hWnd, HOTKEY_ID_PATCH, MOD_CONTROL, VK_P))
-                MessageBox.Show("热键 ALT + P 已经被占用，可能不会生效！", "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("热键 ALT + P 已经被占用，可能不会生效！", "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）", MessageBoxButton.OK, MessageBoxImage.Warning);
             if (!RegisterHotKey(hWnd, HOTKEY_ID_FOV_DEC, MOD_ALT, VK_OEM_COMMA))
-                MessageBox.Show("热键 ALT + , 已经被占用，可能不会生效！", "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("热键 ALT + , 已经被占用，可能不会生效！", "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）", MessageBoxButton.OK, MessageBoxImage.Warning);
             if (!RegisterHotKey(hWnd, HOTKEY_ID_FOV_INC, MOD_ALT, VK_OEM_PERIOD))
-                MessageBox.Show("热键 ALT + . 已经被占用，可能不会生效！", "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("热键 ALT + . 已经被占用，可能不会生效！", "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）", MessageBoxButton.OK, MessageBoxImage.Warning);
 
             ComponentDispatcher.ThreadFilterMessage += new ThreadMessageEventHandler(ComponentDispatcherThreadFilterMessage);
 
@@ -360,11 +363,23 @@ namespace SekiroFpsUnlockAndMore
             }
 
             string gameFileVersion = FileVersionInfo.GetVersionInfo(procList[0].MainModule.FileName).FileVersion;
-            if (gameFileVersion != GameData.PROCESS_EXE_VERSION && Array.IndexOf(GameData.PROCESS_EXE_VERSION_SUPPORTED, gameFileVersion) < 0 && !_settingsService.ApplicationSettings.gameVersionNotify)
+            if (gameFileVersion != GameData.PROCESS_EXE_VERSION)
             {
-                MessageBox.Show(string.Format("未知的游戏版本 '{0}'。\n某些功能可能无法正常工作，甚至导致游戏崩溃。请点击底部的链接定期检查此实用程序的更新。", gameFileVersion), "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）", MessageBoxButton.OK, MessageBoxImage.Warning);
-                ClearConfiguration();
-                _settingsService.ApplicationSettings.gameVersionNotify = true;
+                if (Array.IndexOf(GameData.PROCESS_EXE_VERSION_SUPPORTED_LEGACY, gameFileVersion) < 0)
+                {
+                    if (!_settingsService.ApplicationSettings.gameVersionNotify)
+                    {
+                        MessageBox.Show(string.Format("未知的游戏版本 '{0}'。\n某些功能可能无法正常工作，甚至导致游戏崩溃。请点击底部的链接定期检查此实用程序的更新。", gameFileVersion), "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        ClearConfiguration();
+                        _settingsService.ApplicationSettings.gameVersionNotify = true;
+                        SaveConfiguration();
+                    }
+                }
+                else
+                {
+                    _isLegacyVersion = true;
+                    _settingsService.ApplicationSettings.gameVersionNotify = false;
+                }
             }
             else
                 _settingsService.ApplicationSettings.gameVersionNotify = false;
@@ -521,15 +536,36 @@ namespace SekiroFpsUnlockAndMore
                     Debug.WriteLine("deathPenalties1 original instruction set: " + BitConverter.ToString(_patch_deathpenalties1_enable).Replace('-', ' '));
                 if (_patch_deathpenalties1_enable != null)
                 {
-                    _offset_deathpenalties2 = patternScan.FindPattern(GameData.PATTERN_DEATHPENALTIES2) + GameData.PATTERN_DEATHPENALTIES2_OFFSET;
+                    if (!_isLegacyVersion)
+                        _offset_deathpenalties2 = patternScan.FindPattern(GameData.PATTERN_DEATHPENALTIES2) + GameData.PATTERN_DEATHPENALTIES2_OFFSET;
+                    else
+                        _offset_deathpenalties2 = patternScan.FindPattern(GameData.PATTERN_DEATHPENALTIES2_LEGACY) + GameData.PATTERN_DEATHPENALTIES2_OFFSET_LEGACY;
                     Debug.WriteLine("lpDeathPenalties2 found at: 0x" + _offset_deathpenalties2.ToString("X"));
                     if (IsValidAddress(_offset_deathpenalties2))
                     {
-                        _patch_deathpenalties2_enable = new byte[GameData.PATCH_DEATHPENALTIES2_INSTRUCTION_LENGTH];
-                        if (!ReadProcessMemory(_gameAccessHwnd, _offset_deathpenalties2, _patch_deathpenalties2_enable, (ulong) GameData.PATCH_DEATHPENALTIES2_INSTRUCTION_LENGTH, out lpNumberOfBytesRead) || lpNumberOfBytesRead.ToInt32() != GameData.PATCH_DEATHPENALTIES2_INSTRUCTION_LENGTH)
+                        ulong instrLength = (ulong)GameData.PATCH_DEATHPENALTIES2_INSTRUCTION_LENGTH;
+                        if (!_isLegacyVersion)
+                            _patch_deathpenalties2_enable = new byte[GameData.PATCH_DEATHPENALTIES2_INSTRUCTION_LENGTH];
+                        else
+                        {
+                            _patch_deathpenalties2_enable = new byte[GameData.PATCH_DEATHPENALTIES2_INSTRUCTION_LENGTH_LEGACY];
+                            instrLength = (ulong)GameData.PATCH_DEATHPENALTIES2_INSTRUCTION_LENGTH_LEGACY;
+                        }
+                        if (!ReadProcessMemory(_gameAccessHwnd, _offset_deathpenalties2, _patch_deathpenalties2_enable, instrLength, out lpNumberOfBytesRead) || lpNumberOfBytesRead.ToInt32() != (long)instrLength)
                             _patch_deathpenalties2_enable = null;
                         else
+                        {
                             Debug.WriteLine("deathPenalties2 original instruction set: " + BitConverter.ToString(_patch_deathpenalties2_enable).Replace('-', ' '));
+                            if (!_isLegacyVersion)
+                            {
+                                _offset_deathpenalties3 = _offset_deathpenalties2 + GameData.PATTERN_DEATHPENALTIES3_OFFSET;
+                                _patch_deathpenalties3_enable = new byte[GameData.PATCH_DEATHPENALTIES3_INSTRUCTION_LENGTH];
+                                if (!ReadProcessMemory(_gameAccessHwnd, _offset_deathpenalties3, _patch_deathpenalties3_enable, (ulong)GameData.PATCH_DEATHPENALTIES3_INSTRUCTION_LENGTH, out lpNumberOfBytesRead) || lpNumberOfBytesRead.ToInt32() != GameData.PATCH_DEATHPENALTIES3_INSTRUCTION_LENGTH)
+                                    _patch_deathpenalties2_enable = null;
+                                else
+                                    Debug.WriteLine("deathPenalties3 original instruction set: " + BitConverter.ToString(_patch_deathpenalties3_enable).Replace('-', ' '));
+                            }
+                        }
                     }
                     else
                         _offset_deathpenalties2 = 0x0;
@@ -539,8 +575,10 @@ namespace SekiroFpsUnlockAndMore
             {
                 _offset_deathpenalties1 = 0x0;
                 _offset_deathpenalties2 = 0x0;
+                _offset_deathpenalties3 = 0x0;
                 _patch_deathpenalties1_enable = null;
                 _patch_deathpenalties2_enable = null;
+                _patch_deathpenalties3_enable = null;
             }
 
             if (_settingsService.ApplicationSettings.hiddenDPs == ZUH_HIDDEN_DP)
@@ -974,7 +1012,7 @@ namespace SekiroFpsUnlockAndMore
             {
                 if (IsFullscreen(_gameHwnd) || IsMinimized(_gameHwnd))
                 {
-                    MessageBox.Show("请先退出全屏或取消最小化窗口，再激活无边框窗口模式。", "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）");
+                    MessageBox.Show("请先退出全屏或取消最小化窗口，再激活无边框窗口模式。", "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）");
                     this.cbBorderless.IsChecked = false;
                     return false;
                 }
@@ -1090,13 +1128,17 @@ namespace SekiroFpsUnlockAndMore
             {
                 WriteBytes(_gameAccessHwndStatic, _offset_deathpenalties1, GameData.PATCH_DEATHPENALTIES1_DISABLE);
                 WriteBytes(_gameAccessHwndStatic, _offset_deathpenalties2, GameData.PATCH_DEATHPENALTIES2_DISABLE);
+                if (!_isLegacyVersion && _offset_deathpenalties3 != 0x0)
+                    WriteBytes(_gameAccessHwndStatic, _offset_deathpenalties3, GameData.PATCH_DEATHPENALTIES3_DISABLE);
             }
             else if (this.cbDeathPenalty.IsChecked == false)
             {
-                if (_initialStartup)
+                if (!_initialStartup)
                 {
                     WriteBytes(_gameAccessHwndStatic, _offset_deathpenalties1, _patch_deathpenalties1_enable);
                     WriteBytes(_gameAccessHwndStatic, _offset_deathpenalties2, _patch_deathpenalties2_enable);
+                    if (!_isLegacyVersion && _offset_deathpenalties3 != 0x0)
+                        WriteBytes(_gameAccessHwndStatic, _offset_deathpenalties3, _patch_deathpenalties3_enable);
                 }
                 if (showStatus) UpdateStatus(DateTime.Now.ToString("HH:mm:ss") + " 已还原！", Brushes.White);
                 return false;
@@ -1265,7 +1307,7 @@ namespace SekiroFpsUnlockAndMore
                 {
                     MessageBoxResult result = MessageBox.Show("Disabling camera auto adjustment is intended for mouse users.\n\n" +
                                                               "If you are using a controller this will not work perfectly and you will temporary loose the deadzones on your controller (slow tiling).\n\n" +
-                                                              "Do you want to continue?", "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                                                              "Do you want to continue?", "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）", MessageBoxButton.YesNo, MessageBoxImage.Warning);
                     if (result == MessageBoxResult.No)
                     {
                         this.cbCamAdjust.IsEnabled = false;
@@ -1274,7 +1316,7 @@ namespace SekiroFpsUnlockAndMore
                         return;
                     }
                     result = MessageBox.Show("Are you using a mouse as input?\n\n" +
-                                             "To change your selection just delete the configuration file: SekiroFpsUnlockAndMore.xml", "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                                             "To change your selection just delete the configuration file: SekiroFpsUnlockAndMore.xml", "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (result == MessageBoxResult.No)
                     {
                         _settingsService.ApplicationSettings.peasantInput = true;
@@ -1628,7 +1670,7 @@ namespace SekiroFpsUnlockAndMore
             }
             catch (Exception ex)
             {
-                MessageBox.Show("修改日志文件失败：" + ex.Message, "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）");
+                MessageBox.Show("修改日志文件失败：" + ex.Message, "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）");
             }
         }
 
@@ -1650,7 +1692,7 @@ namespace SekiroFpsUnlockAndMore
             {
                 LogToFile("修改玩家状态日志文件失败：" + ex.Message);
                 // don't show a messagebox as this will potentially steal focus from game
-                // MessageBox.Show("修改玩家状态日志文件失败：" + ex.Message, "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）");
+                // MessageBox.Show("修改玩家状态日志文件失败：" + ex.Message, "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）");
             }
         }
 
@@ -1787,7 +1829,7 @@ namespace SekiroFpsUnlockAndMore
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("删除玩家状态日志文件失败：" + ex.Message, "《只狼：影逝二度》FPS解锁工具 v1.2.5.1（允哥汉化修正版）");
+                    MessageBox.Show("删除玩家状态日志文件失败：" + ex.Message, "《只狼：影逝二度》FPS解锁工具 v1.2.5.2（允哥汉化修正版）");
                 }
             }
         }
